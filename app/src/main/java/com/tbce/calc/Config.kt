@@ -2,8 +2,8 @@ package com.tbce.calc
 
 /** Every tunable for the hidden gesture, the lock, and key derivation lives here. */
 object Config {
-    /** How long the armed window stays open before it silently closes. */
-    const val ARM_WINDOW_MS = 15_000L
+    /** How long the Dictionary's Search button must be held to open the keypad. */
+    const val HOLD_TO_UNLOCK_MS = 3_000L
 
     /** Idle time inside the vault before it locks. */
     const val IDLE_LOCK_MS = 60_000L

@@ -9,8 +9,6 @@ import com.tbce.calc.vault.KeyVault
 import com.tbce.calc.vault.VaultSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -44,32 +42,26 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
     }
 
     /**
-     * The hidden arm/submit gesture of a disguise (the Dictionary's Search button): the first hold
-     * arms silently, the second submits the digits typed in between. [digits] is what the face
-     * shows at the time of the hold.
+     * The Dictionary's hidden keypad, opened by holding Search for [Config.HOLD_TO_UNLOCK_MS].
+     * Memory only; closed whenever the app leaves the screen.
      */
-    var armed by mutableStateOf(false)
+    var keypadOpen by mutableStateOf(false)
         private set
-    private var faceTimer: Job? = null
 
-    fun faceTrigger(digits: ByteArray) {
+    /** The hold on Search: the keypad, or setup on a fresh install. */
+    fun faceHold() {
         if (!vault.exists()) { screen = Screen.SETUP; return }
-        if (!armed) {
-            armed = true
-            faceTimer?.cancel()
-            faceTimer = scope.launch { delay(Config.ARM_WINDOW_MS); armed = false }
-        } else {
-            armed = false
-            faceTimer?.cancel()
-            val code = digits.copyOf()
-            val gen = generation
-            scope.launch {
-                val s = withContext(Dispatchers.Default) { try { vault.unlock(code) } finally { code.fill(0) } }
-                if (s == null) return@launch
-                if (gen != generation) { s.wipe(); return@launch }
-                open(s)
-            }
-        }
+        keypadOpen = true
+    }
+
+    fun closeKeypad() { keypadOpen = false }
+
+    /**
+     * The keypad's code. The keypad stays up while the code is checked, then closes: a wrong
+     * code just leaves the Dictionary as it was. The caller zeros [code].
+     */
+    fun keypadSubmit(code: ByteArray) {
+        tryCode(code) { keypadOpen = false }
     }
 
     fun hasVault() = vault.exists()
@@ -77,7 +69,7 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
     fun startSetup() { screen = Screen.SETUP }
 
     /**
-     * The undisguised face's plain code entry: no hidden gesture, just the code and Open.
+     * Plain code entry: the undisguised face's number pad and the Dictionary's keypad.
      * [onWrong] runs on the main thread if the code is wrong. The caller zeros [code] afterwards;
      * this works on its own copy.
      */
@@ -91,11 +83,6 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
             if (gen != generation) { s.wipe(); return@launch }
             open(s)
         }
-    }
-
-    fun faceDisarm() {
-        armed = false
-        faceTimer?.cancel()
     }
 
     /** Setup finished: the new vault is open. The caller zeros [code]. */
@@ -118,6 +105,7 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
 
     private fun open(s: VaultSession) {
         session = s
+        keypadOpen = false
         vaultOpens++
         screen = Screen.INSIDE
     }
@@ -149,6 +137,7 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
             s.wipe()
         }
         session = null
+        keypadOpen = false
         screen = Screen.FRONT
     }
 
@@ -159,7 +148,6 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
 
     fun onBackground() {
         pickerOpen = false
-        faceDisarm()
         lock()
     }
 }

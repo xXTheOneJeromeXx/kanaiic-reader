@@ -81,28 +81,28 @@ UI = {
     # Setup and code screens: kept out of the APK so they don't describe the hidden gesture.
     "code_new": "Choose a code", "code_again": "Enter the code again", "code_change": "Choose a new code",
     "code_min": "Use at least {min} digits. {good} or more is better.",
-    "code_how_dictionary": "To open later: hold Search until the box clears, type your code in the box, then hold Search again.",
+    "code_how_dictionary": "To open later: hold Search for three seconds, then type your code on the number pad that appears and tap OK.",
     "code_how_reader": "You'll type this code each time you open the app.",
     "code_lost": "A forgotten code can't be recovered, and nothing inside can be opened without it.",
     "code_watch": "Anyone watching can see the digits on screen as you type.",
     "code_mismatch": "Those didn't match. Start again.",
     "code_weak": "Easy to guess", "code_short": "Too short", "code_ok": "OK. Longer is better.", "code_good": "Good length",
     # Disguise reminders: name the hidden gesture, so they live in the pack, not the APK.
-    "entry_dictionary": "The app now looks like a Dictionary, with Thesaurus and Notes tabs. To open the reader: hold Search until the box clears, type your code in the box, then hold Search again. A normal tap of Search just looks a word up.",
+    "entry_dictionary": "The app now looks like a Dictionary, with Thesaurus and Notes tabs. To open the reader: hold Search for three seconds, then type your code on the number pad that appears and tap OK. A normal tap of Search just looks a word up.",
     # Always-visible ways in, shown under Settings > Disguise.
     "how_title": "How to open the app",
-    "how_dictionary": "As Dictionary: hold Search until the box clears, type your code in the box, then hold Search again.",
+    "how_dictionary": "As Dictionary: hold Search for three seconds, then type your code on the number pad that appears and tap OK.",
     "how_reader": "As Kanaiic Reader: type your code on the number pad and tap Open.",
     # Shown on the Dictionary face each time it opens until a code is set (direct installs start there).
     "welcome_title": "Welcome",
-    "welcome_text": "This is Kanaiic Reader, a private Bible reader, disguised as a dictionary.\n\nTo set it up: hold the Search button for about two seconds and the setup screen opens. Choose a code of at least 6 digits.\n\nAfterwards, to open the reader: hold Search until the box clears, type your code in the box, then hold Search again. A normal tap of Search just looks a word up. These steps are always in the reader's Settings, where you can also switch to the app's own name and icon.\n\nThis message stops appearing once a code is set.",
+    "welcome_text": "This is Kanaiic Reader, a private Bible reader, disguised as a dictionary.\n\nTo set it up: hold the Search button for three seconds and the setup screen opens. Choose a code of at least 6 digits.\n\nAfterwards, to open the reader: hold Search for three seconds, then type your code on the number pad that appears and tap OK. A normal tap of Search just looks a word up. These steps are always in the reader's Settings, where you can also switch to the app's own name and icon.\n\nThis message stops appearing once a code is set.",
     "welcome_setup": "Set up now", "welcome_later": "Later",
     # Offered once, right after a code is first set on the app's own face.
     "offer_title": "Disguise the app now?",
     "offer_text": "It can look like an ordinary dictionary on your home screen and in your app list. You can also do this later in Settings > Disguise.",
     "offer_now": "Disguise now", "offer_later": "Later",
     "offer_steps_title": "How to open it once disguised",
-    "offer_steps": "The app will show as \"Dictionary\". To open the reader: hold Search until the box clears, type your code in the box, then hold Search again. A normal tap of Search just looks a word up.\n\nThese steps are always in Settings > Disguise. The app goes to the home screen when you switch.",
+    "offer_steps": "The app will show as \"Dictionary\". To open the reader: hold Search for three seconds, then type your code on the number pad that appears and tap OK. A normal tap of Search just looks a word up.\n\nThese steps are always in Settings > Disguise. The app goes to the home screen when you switch.",
     "offer_switch": "Switch to Dictionary",
     "entry_reader": "The app now shows its own name and icon, and opens with your code on a plain number pad. Anyone who sees the phone can tell what it is.",
     # The play edition's undisguised front screen.

@@ -35,8 +35,9 @@ like any other app.)
    then **Install anyway**. If it offers to **scan** the app, you can let it; then install.
 10. Tap **Open** or **Done**. The app is now on your home screen or in your app list as
     **Dictionary**. Open it and follow the message: tap **Set up now** (or hold the blue
-    **Search** button for two seconds) and choose your code. To get in later: hold Search until
-    the box clears, type your code, hold Search again. The steps are also in the app's Settings.
+    **Search** button for three seconds) and choose your code. To get in later: hold Search for
+    three seconds, type your code on the number pad that appears, and tap **OK**. The steps are
+    also in the app's Settings.
 
 ## 5. Tidy up (important)
 
@@ -49,8 +50,8 @@ like any other app.)
 
 New versions are installed the same way, over the top. Your code and notes stay, and so does
 the disguise you chose: a phone that looks like a dictionary keeps looking like one. Version 1.5 removed the older
-disguises: if your phone used one, the update turns it into the dictionary (hold **Search**,
-type your code, hold **Search** again).
+disguises: if your phone used one, the update turns it into the dictionary (hold **Search**
+for three seconds, type your code on the number pad, tap **OK**).
 
 ## If something goes wrong
 

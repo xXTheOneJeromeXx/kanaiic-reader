@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.9.0 (2026-10-19): easier way into the dictionary
+
+- To open the reader from the dictionary, **hold Search for three seconds**: a number pad
+  appears. Type your code and tap **OK**. This replaces the old way (hold Search, type the
+  code in the search box, hold Search again), which many people found hard to get right.
+- A wrong code just closes the number pad and leaves the dictionary as it was. Back, or a
+  tap outside the pad, closes it too.
+- Your code doesn't change. On a new install, the same three-second hold opens setup.
+- Anyone watching can see the number pad appear, so open the app out of sight.
+
 ## 1.8.0 (2026-10-04): the direct version starts as the dictionary
 
 - A new install of the version from kanaiic.com and GitHub starts **disguised as

@@ -10,6 +10,7 @@ import android.widget.EditText
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,12 +36,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.tbce.calc.AppController
+import com.tbce.calc.Config
 import com.tbce.calc.dictionary.Dictionary
 import com.tbce.calc.dictionary.DictionaryStore
 import kotlinx.coroutines.Dispatchers
@@ -75,8 +80,8 @@ private enum class RefTab(val title: String) { DICTIONARY("Dictionary"), THESAUR
 /**
  * The reference disguise: a working offline dictionary and thesaurus (WordNet 3.0), a notepad and
  * a PDF viewer.
- * Behind it is the same reader and code. To open the reader, hold Search (the box clears), type
- * the code, and hold Search again. A normal tap of Search just looks the word up.
+ * Behind it is the same reader and code. To open the reader, hold Search for three seconds; a
+ * keypad appears for the code. A normal tap of Search just looks the word up.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -93,7 +98,6 @@ fun DictionaryScreen(app: AppController) {
     var recent by remember { mutableStateOf(store.recent()) }
     var daily by remember { mutableStateOf<Dictionary.Entry?>(null) }
     var about by remember { mutableStateOf(false) }
-    var prevArmed by remember { mutableStateOf(app.armed) }
     val editor = remember { arrayOfNulls<EditText>(1) }
     val pdf = remember { PdfHolder() }
     // Until a code exists, each launch explains how to set one up and how to get in later.
@@ -125,21 +129,14 @@ fun DictionaryScreen(app: AppController) {
     }
 
     fun search() {
-        if (app.armed) { app.faceDisarm(); return }
         val q = field.trim()
         if (q.isEmpty()) return
         val e = dict.lookup(q)
         if (e != null) show(e) else { entry = null; notFound = q }
     }
 
-    // When the hidden gesture arms or disarms, the search box becomes the code buffer and is
-    // cleared, so a wrong code or a cancelled attempt leaves nothing behind.
-    if (app.armed != prevArmed) {
-        prevArmed = app.armed
-        entry = null
-        notFound = null
-        setField("")
-    }
+    // The keypad covers the screen; the keyboard goes away so it doesn't sit on top.
+    LaunchedEffect(app.keypadOpen) { if (app.keypadOpen) hideKeyboard() }
 
     LaunchedEffect(field) {
         val q = field
@@ -150,9 +147,8 @@ fun DictionaryScreen(app: AppController) {
     }
 
     val searching = tab != RefTab.NOTES && tab != RefTab.PDF
-    BackHandler(enabled = searching && (app.armed || entry != null || notFound != null || field.isNotEmpty())) {
+    BackHandler(enabled = searching && (entry != null || notFound != null || field.isNotEmpty())) {
         when {
-            app.armed -> app.faceDisarm()
             entry != null -> entry = null
             else -> { notFound = null; setField("") }
         }
@@ -200,8 +196,6 @@ fun DictionaryScreen(app: AppController) {
                                         field = t
                                         notFound = null
                                         if (t.isNotEmpty()) entry = null
-                                        // While armed the box holds only the code; a non-digit means "never mind".
-                                        if (app.armed && t.any { !it.isDigit() }) app.faceDisarm()
                                     }
                                 })
                                 editor[0] = this
@@ -211,18 +205,20 @@ fun DictionaryScreen(app: AppController) {
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                // Tap looks the word up; a long hold is the hidden gesture (arm, then submit).
+                // Tap looks the word up; a long hold is the hidden gesture (opens the keypad).
                 // A filled button, so it reads as something to press and hold, not a label.
-                Box(
-                    Modifier
-                        .height(48.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(c.accent)
-                        .faceHoldable(onTap = { search() }, onHold = { app.faceTrigger(field.filter { it.isDigit() }.toByteArray()) })
-                        .padding(horizontal = 20.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("Search", color = c.onAccent, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                HoldFor(Config.HOLD_TO_UNLOCK_MS) {
+                    Box(
+                        Modifier
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(c.accent)
+                            .faceHoldable(onTap = { search() }, onHold = { app.faceHold() })
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("Search", color = c.onAccent, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
@@ -251,15 +247,14 @@ fun DictionaryScreen(app: AppController) {
                         color = if (on) c.accent else c.dim,
                         fontSize = 15.sp,
                         fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
-                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable {
-                            if (app.armed) app.faceDisarm()
-                            tab = t
-                        }.padding(horizontal = 16.dp, vertical = 10.dp),
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { tab = t }.padding(horizontal = 16.dp, vertical = 10.dp),
                     )
                 }
             }
         }
     }
+
+    if (app.keypadOpen) Keypad(c, onCode = { app.keypadSubmit(it) }, onClose = { app.closeKeypad() })
 
     if (welcome && !app.hasVault()) {
         AlertDialog(
@@ -284,6 +279,72 @@ fun DictionaryScreen(app: AppController) {
             },
             confirmButton = { TextButton(onClick = { about = false }) { Text("OK") } },
         )
+    }
+}
+
+/**
+ * The hidden keypad: dots for the digits typed, a number pad, backspace and OK. Back or a tap
+ * outside closes it. It closes on OK too, whatever the code, so a wrong code shows nothing.
+ */
+@Composable
+private fun Keypad(c: DictColors, onCode: (ByteArray) -> Unit, onClose: () -> Unit) {
+    val code = remember { CodeBuffer() }
+    var count by remember { mutableIntStateOf(0) }
+    // True while the code is checked (about a second); the keys do nothing meanwhile.
+    var working by remember { mutableStateOf(false) }
+    DisposableEffect(Unit) { onDispose { code.wipe() } }
+    BackHandler { onClose() }
+
+    fun add(d: Int) { if (!working && code.length < Config.MAX_CODE_DIGITS) { code.add(d); count++ } }
+    fun submit() {
+        if (working) return
+        if (code.length == 0) { onClose(); return }
+        working = true
+        val attempt = code.copy()
+        code.wipe(); count++
+        try { onCode(attempt) } finally { attempt.fill(0) }
+    }
+
+    Box(
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClose() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier.padding(24.dp).width(300.dp).clip(RoundedCornerShape(24.dp)).background(c.bg)
+                // Taps between the keys stay on the keypad.
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            val shown = count.let { code.length }
+            Box(Modifier.height(32.dp), contentAlignment = Alignment.Center) {
+                if (working) CircularProgressIndicator(Modifier.size(24.dp), color = c.accent, strokeWidth = 2.dp)
+                else Text(if (shown == 0) " " else "●".repeat(shown), color = c.text, fontSize = 18.sp, letterSpacing = 2.sp, maxLines = 1)
+            }
+            for (row in listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("⌫", "0", "OK"))) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    for (k in row) {
+                        val action = k == "OK"
+                        Box(
+                            Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(28.dp))
+                                .background(if (action) c.accent else c.field)
+                                .clickable {
+                                    when (k) {
+                                        "⌫" -> if (!working) { code.back(); count++ }
+                                        "OK" -> submit()
+                                        else -> add(k.toInt())
+                                    }
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(k, color = if (action) c.onAccent else c.text, fontSize = if (action) 18.sp else 24.sp, fontWeight = if (action) FontWeight.SemiBold else FontWeight.Normal)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

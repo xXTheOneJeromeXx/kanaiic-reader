@@ -48,8 +48,10 @@ Play (`app-play-*.apk`):
    **Hide** at top left, double-tap the top-left corner, 60 s without touching.
 2. Recents while open shows a blank card; a screenshot while open is black (release build).
 3. Kanaiic Reader face: a wrong code says so; the right one opens.
-4. Dictionary face: hold Search, type a wrong code, hold Search: an empty search, nothing
-   else. Typing a letter while armed, or waiting 15 s, disarms; the next hold arms again.
+4. Dictionary face: a quick tap of Search looks the word up; letting go before 3 s also
+   just searches. Hold Search 3 s: the number pad appears and the keyboard hides. A wrong code
+   and OK closes the pad with nothing else; Back or a tap outside closes it too; the right code
+   opens. Home while the pad is open, then back to the app: the pad is gone.
 
 ## Reading
 

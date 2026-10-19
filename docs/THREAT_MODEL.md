@@ -38,10 +38,12 @@ the original design brief (sections 2, 4, 5, 6 and 9).
   manifest default since 1.6), and the Sudoku save is deleted. The launcher can show the
   manifest default for up to about a second after an update, before the receiver runs.
 - Hidden gesture (brief section 4, adapted from the original disguise's `=` key to the Dictionary's
-  Search button): hold Search to arm (the box clears), type the code in the box, hold Search
-  again to submit. Typing a non-digit, 15 s, or backgrounding silently disarms; the box clears
-  on arm and disarm, and lookups store only headwords that were opened. No haptics, sound or
-  visual difference beyond the cleared box.
+  Search button): from 1.9, hold Search for 3 s and a number pad appears over the dictionary;
+  the code goes in there and OK submits. The pad closes on OK whatever the code, on Back, on
+  a tap outside it and when the app leaves the screen, so a wrong code shows nothing.
+  Lookups store only headwords that were opened. No haptics or sound. Accepted cost
+  (2026-10-19): testers found the earlier arm/type/submit gesture hard to use; the pad is
+  easier but is itself a visible tell to anyone who sees it appear or holds Search for 3 s.
 - No permissions (no INTERNET), `allowBackup=false`, empty data-extraction rules, only the
   launcher activity exported (the androidx profile-installer receiver and the
   DYNAMIC_RECEIVER permission are removed in the manifest).
@@ -75,7 +77,7 @@ c0         = version | salt | m | t | p | GCM_KEK_device( GCM_KEK_code( DEK ) )
 
 - `c1` = `GCM_KEK_device(enabled byte | consecutive failures)`. Rewritten after every
   submitted attempt, right or wrong, so a failure makes no extra disk write. Opt-in; at 10 in
-  a row the vault crypto-erases. Only armed submissions count.
+  a row the vault crypto-erases. Only codes submitted from a code pad count.
 
 ### Backups (Q29)
 
@@ -115,7 +117,7 @@ c0         = version | salt | m | t | p | GCM_KEK_device( GCM_KEK_code( DEK ) )
 4. **StrongBox fallback untested** on a phone without StrongBox (emulator only).
 5. **Strings in memory.** Note text, search queries and passphrases pass through Java
    `String`s (EditText) that cannot be zeroed; they live until garbage collection. So does
-   the code itself when it is typed in the Dictionary's search box.
+   The code itself is kept in a byte buffer that is zeroed after each attempt.
 6. **Online guessing.** With the device in hand, codes can be tried through the app at
    about 1–2 s each. A 6-digit code falls in days; 8+ digits and the opt-in wipe help.
 7. **Picker grace window.** The vault stays unlocked up to 120 s behind the system picker.

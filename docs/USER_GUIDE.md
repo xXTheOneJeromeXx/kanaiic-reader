@@ -41,7 +41,7 @@ app at all. Only you can weigh that.
 1. Open the app.
    - **Google Play version:** it asks you to choose a code straight away.
    - **Direct version:** it opens as a dictionary, with a message explaining how to get in.
-     Tap **Set up now**, or hold the **Search** button for about two seconds; the setup
+     Tap **Set up now**, or hold the **Search** button for three seconds; the setup
      screen opens. The message appears each time until a code is set.
 2. Type a code of at least 6 digits, then the same code again. 8 or more digits is much
    better. Do not use your phone PIN, a birthday, or something like 123456.
@@ -57,13 +57,15 @@ made the app. If you forget it, everything inside is gone. Make a backup (see be
 
 As Kanaiic Reader: type your code on the number pad and tap **Open**.
 
-As a dictionary, the way in is hidden in the **Search** button: hold it for about two seconds
-(the search box clears), type your code in the box, then hold **Search** again. A normal tap
-of Search just looks a word up.
+As a dictionary, the way in is hidden in the **Search** button: hold it for three seconds and
+a number pad appears. Type your code and tap **OK**. A normal tap of Search just looks a word
+up.
 
-If the code is wrong, nothing happens: the dictionary shows an empty search. If you type
-anything other than digits in between, or wait 15 seconds, it goes back to normal and you can
-start again.
+If the code is wrong, the number pad just closes and the dictionary stays as it was. Back, or
+a tap outside the number pad, closes it too. Hold **Search** again to try again.
+
+Anyone watching you hold Search can see the number pad appear, so open the app where no one
+is looking over your shoulder.
 
 The dictionary is a working dictionary and thesaurus with Notes and PDF tabs. Only its Search
 button opens the reader; the Notes tab is an ordinary notepad, and the PDF tab opens PDF files
