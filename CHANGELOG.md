@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.1 (2026-10-20): notes on saved verses
+
+- A saved verse or chapter now shows the notes you made on it in the reader, under its own
+  notes, each marked with the verses it's on. Tap one to edit it; Done brings you back to the
+  saved item. The note count and the filter on the Saved list include them too.
+
 ## 1.9.0 (2026-10-19): easier way into the dictionary
 
 - To open the reader from the dictionary, **hold Search for three seconds**: a number pad

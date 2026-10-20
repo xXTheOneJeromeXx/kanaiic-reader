@@ -48,6 +48,10 @@ private fun ReaderState.refOf(s: Annotations.Saved) = label(s.book, s.chapter, s
 private fun ReaderState.textOf(s: Annotations.Saved, tid: String = translationId) =
     verseText(tid, s.book, s.chapter, s.verses)
 
+/** Note bodies on a saved item: its own notes, then reader notes on the same verses or chapter. */
+private fun Annotations.noteBodies(s: Annotations.Saved) =
+    s.notes.map { it.body } + notesFor(s).map { it.body } + footnotesFor(s).map { it.body }
+
 private enum class Section(val label: String) { VERSES("Verses"), NOTES("Notes") }
 
 /** Every verse note and chapter note, so the Notes section lists them without saving anything. */
@@ -70,7 +74,7 @@ fun SavedPane(state: ReaderState, c: ReaderColors, touch: () -> Unit) {
     val items = remember(version, q, sort, state.translationId) {
         a.saved
             .filter { s ->
-                q.isEmpty() || SearchIndex.fold(state.refOf(s) + " " + s.label + " " + s.notes.joinToString(" ") { it.body } + " " + state.textOf(s))
+                q.isEmpty() || SearchIndex.fold(state.refOf(s) + " " + s.label + " " + a.noteBodies(s).joinToString(" ") + " " + state.textOf(s))
                     .contains(q)
             }
             .let { list ->
@@ -147,8 +151,9 @@ fun SavedPane(state: ReaderState, c: ReaderColors, touch: () -> Unit) {
                         state.textOf(s), color = c.text, fontSize = 16.sp, lineHeight = 22.sp, fontFamily = family,
                         maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp),
                     )
-                    if (s.notes.isNotEmpty()) {
-                        Text(if (s.notes.size == 1) "1 note" else "${s.notes.size} notes", color = c.dim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                    val noteCount = a.noteBodies(s).size
+                    if (noteCount > 0) {
+                        Text(if (noteCount == 1) "1 note" else "$noteCount notes", color = c.dim, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                     }
                 }
             } else items(notes, key = { it.id }) { n ->
@@ -247,6 +252,17 @@ fun SavedDetailOverlay(state: ReaderState, d: Overlay.SavedDetail, c: ReaderColo
                 )
                 HorizontalDivider(color = c.dim.copy(alpha = 0.15f))
             }
+            // Notes made in the reader on these verses or this chapter, so they show here too.
+            val chapterWord = state.meta.ui("chapter").lowercase()
+            for (n in remember(version) { a.notesFor(s) }) {
+                ReaderNoteRow(state.label(n.book, n.chapter, n.verses), n.body, c) { openNote(state, n.id, back = d) }
+                HorizontalDivider(color = c.dim.copy(alpha = 0.15f))
+            }
+            for (f in remember(version) { a.footnotesFor(s) }) {
+                val at = if (f.verse > 0) state.label(f.book, f.chapter, listOf(f.verse)) else state.label(f.book, f.chapter)
+                ReaderNoteRow("$at · $chapterWord note", f.body, c) { editChapterNote(state, f.book, f.chapter, f.id, back = d) }
+                HorizontalDivider(color = c.dim.copy(alpha = 0.15f))
+            }
             TextButton(onClick = {
                 state.overlay = Overlay.Editor(
                     title = state.refOf(s), initial = "", verse = null, maxVerse = 0,
@@ -261,5 +277,14 @@ fun SavedDetailOverlay(state: ReaderState, d: Overlay.SavedDetail, c: ReaderColo
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+/** A note made in the reader, shown on a saved item with the verses it is on. */
+@Composable
+private fun ReaderNoteRow(ref: String, body: String, c: ReaderColors, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(vertical = 10.dp)) {
+        Text(ref, color = c.dim, fontSize = 13.sp)
+        Text(body, color = c.text, fontSize = 16.sp, lineHeight = 22.sp, modifier = Modifier.padding(top = 2.dp))
     }
 }
