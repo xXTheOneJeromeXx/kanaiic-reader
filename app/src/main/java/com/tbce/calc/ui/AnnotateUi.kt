@@ -172,7 +172,7 @@ private fun holdVerse(state: ReaderState, book: String, chapter: Int, v: Int) {
     else Selection(book, chapter, (s.verses + (minOf(s.last, v)..maxOf(s.last, v))).distinct().sorted(), v)
 }
 
-fun openNote(state: ReaderState, id: String) {
+fun openNote(state: ReaderState, id: String, back: Overlay? = null) {
     val n = state.annotations.note(id) ?: return
     state.overlay = Overlay.Editor(
         title = state.label(n.book, n.chapter, n.verses),
@@ -181,6 +181,7 @@ fun openNote(state: ReaderState, id: String) {
         maxVerse = 0,
         onSave = { body, _ -> if (body.isBlank()) state.annotations.deleteNote(id) else state.annotations.updateNote(id, body) },
         onDelete = { state.annotations.deleteNote(id) },
+        back = back,
     )
 }
 
@@ -262,7 +263,7 @@ fun ChapterFooter(state: ReaderState, c: ReaderColors, book: String, chapter: In
     }
 }
 
-fun editChapterNote(state: ReaderState, book: String, chapter: Int, id: String?) {
+fun editChapterNote(state: ReaderState, book: String, chapter: Int, id: String?, back: Overlay? = null) {
     val a = state.annotations
     val f = id?.let { a.footnote(it) }
     state.overlay = Overlay.Editor(
@@ -278,6 +279,7 @@ fun editChapterNote(state: ReaderState, book: String, chapter: Int, id: String?)
             }
         },
         onDelete = f?.let { { a.deleteFootnote(it.id) } },
+        back = back,
     )
 }
 

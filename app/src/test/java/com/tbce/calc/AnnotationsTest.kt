@@ -62,6 +62,20 @@ class AnnotationsTest {
         assertNull(reloaded().savedItem(s.id))
     }
 
+    @Test fun readerNotesShowOnSavedItems() {
+        val touching = a.addNote("PSA", 23, listOf(3, 4), "touches verse 4")
+        a.addNote("PSA", 23, listOf(2), "not saved")
+        a.addNote("PSA", 24, listOf(4), "other chapter")
+        val at4 = a.addFootnote("PSA", 23, 4, "chapter note at 4")
+        a.addFootnote("PSA", 23, 0, "whole chapter")
+        val verses = a.save(Kind.RANGE, "PSA", 23, listOf(1, 4, 6), "kjv")
+        assertEquals(listOf(touching.id), a.notesFor(verses).map { it.id })
+        assertEquals(listOf(at4.id), a.footnotesFor(verses).map { it.id })
+        val chapter = a.save(Kind.CHAPTER, "PSA", 23, emptyList(), "kjv")
+        assertEquals(2, a.notesFor(chapter).size)
+        assertEquals(2, a.footnotesFor(chapter).size)
+    }
+
     @Test fun recentPassages() {
         a.visit("GEN", 1); a.visit("GEN", 2); a.visit("GEN", 1); a.visit("GEN", 1)
         assertEquals(listOf("GEN.1", "GEN.2"), reloaded().recent.map { "${it.book}.${it.chapter}" })

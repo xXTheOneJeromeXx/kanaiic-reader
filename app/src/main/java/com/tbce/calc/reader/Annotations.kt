@@ -132,6 +132,14 @@ class Annotations(private val persist: (ByteArray) -> Unit = {}) {
         if (savedItem(id)?.notes?.removeAll { it.id == noteId } == true) changed()
     }
 
+    /** Reader notes on [s]: every verse note in a saved chapter, or those touching one of the saved verses. */
+    fun notesFor(s: Saved): List<Note> =
+        notesIn(s.book, s.chapter).filter { n -> s.kind == Kind.CHAPTER || n.verses.any { it in s.verses } }.sortedBy { it.vStart }
+
+    /** Chapter notes on [s]: all of them for a saved chapter, otherwise those set at one of the saved verses. */
+    fun footnotesFor(s: Saved): List<Footnote> =
+        footnotesIn(s.book, s.chapter).filter { s.kind == Kind.CHAPTER || it.verse in s.verses }
+
     // ---- recent passages (most recent first, no repeats)
 
     fun visit(book: String, chapter: Int) {

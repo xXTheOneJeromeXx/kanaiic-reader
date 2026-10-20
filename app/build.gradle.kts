@@ -21,8 +21,8 @@ android {
     defaultConfig {
         minSdk = 24
         targetSdk = 36
-        versionCode = 19
-        versionName = "1.9.0"
+        versionCode = 20
+        versionName = "1.9.1"
     }
 
     // Two editions from one codebase. They behave the same; the application id differs, and it
