@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.10.0 (2026-10-26): one Search, marked results, a Back arrow
+
+- **Search and Strong's are one tab.** The same box finds words in the current translation,
+  goes to a reference like John 3:16, and looks up Strong's by number (G26), English word
+  (love) or transliteration (agape). Matching Strong's entries come first (three, with "Show
+  all"), then the verses.
+- **Your search shows in the reader.** Tapping a verse in the results opens it with the verse
+  tinted and the words you searched for picked out. Going to a reference, or to a verse from
+  a Strong's entry, tints the verse. The marks go when you swipe to another chapter.
+- **The button at the top left is now a Back arrow** instead of Hide. It goes back one screen:
+  to your search results (query and place kept), to the Strong's entry you came from, to the
+  previous tab, or to the chapter you were on before picking another. It is faded when there
+  is nowhere to go back to. Double-tapping the top-left corner still hides the reader, and so
+  does Back with nowhere left to go.
+
 ## 1.9.1 (2026-10-20): notes on saved verses
 
 - A saved verse or chapter now shows the notes you made on it in the reader, under its own

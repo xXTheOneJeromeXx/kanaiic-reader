@@ -76,9 +76,8 @@ you opened, but the phone's file picker may list them under recent files.
 
 It closes itself and shows the front screen again:
 
-- when you tap **Hide** at the top left,
 - when you double-tap the top-left corner,
-- when you press Back on the main screen,
+- when you press Back with nowhere left to go back to,
 - when you go to the home screen or another app, or the screen turns off,
 - after 60 seconds without a touch.
 
@@ -89,13 +88,15 @@ Screenshots, screen recording and the app-switcher preview are blocked while it 
 - Tap the book and chapter at the top to pick another. Recent passages are listed first.
 - Swipe left or right for the next or previous chapter.
 - Tap BSB (top right) to switch translation. You stay on the same passage.
+- The arrow at the top left goes back one screen: to your search results after opening a
+  verse from them, or to the tab or passage you were on before.
 - Search: type a reference like `John 3:16` or `1 cor 13:4-7` to go there, or words to
-  search the current translation.
-- Strong's: select verses and tap **Strong's** to see the Hebrew or Greek word behind each
-  King James word, with its Strong's number. Tap one for its meaning and every verse that
-  uses it. The **Strong's** tab searches the whole lexicon: type a number (`H430`, `G26`), an
+  search the current translation. Tap a verse to open it in the reader with the verse marked
+  and your words picked out. The same search looks up Strong's: a number (`H430`, `G26`), an
   English word as the King James Version translates it (`love`), or a transliteration
-  (`agape`).
+  (`agape`). Tap an entry for its meaning and every verse that uses it.
+- Strong's: select verses and tap **Strong's** to see the Hebrew or Greek word behind each
+  King James word, with its Strong's number.
 - Settings: theme (Paper, Sepia, Dark, Black), text size and line spacing.
 
 ## Highlights, notes and Saved

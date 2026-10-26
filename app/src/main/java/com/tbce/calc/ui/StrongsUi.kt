@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
@@ -45,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tbce.calc.reader.Overlay
 import com.tbce.calc.reader.ReaderState
-import com.tbce.calc.reader.Ref
 import com.tbce.calc.reader.Strongs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -167,7 +165,7 @@ fun LexiconOverlay(state: ReaderState, o: Overlay.Lexicon, c: ReaderColors) {
             items(usage.verses, key = { "${it.book}.${it.chapter}.${it.verse}" }) { r ->
                 // Verse text in the reader's current translation; loads book by book as you scroll.
                 val text = remember(r, tid) { state.verseText(tid, r.book, r.chapter, listOf(r.verse)) }
-                Column(Modifier.fillMaxWidth().clickable { state.goTo(r) }.padding(horizontal = 20.dp, vertical = 10.dp)) {
+                Column(Modifier.fillMaxWidth().clickable { state.goTo(r, "") }.padding(horizontal = 20.dp, vertical = 10.dp)) {
                     Text(state.label(r.book, r.chapter, listOf(r.verse)), color = c.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                     Text(text, color = c.text, fontSize = 16.sp, lineHeight = 22.sp, fontFamily = family)
                 }
@@ -210,68 +208,18 @@ private fun linked(text: String, c: ReaderColors, open: (String) -> Unit): Annot
     append(text, last, text.length)
 }
 
-/** Search tab: a typed Strong's number ("H430", "g26") offers its entry. */
+/** A Strong's entry in the Search results; tapping it opens the entry. */
 @Composable
-fun StrongsSearchRow(state: ReaderState, query: String, c: ReaderColors) {
-    val number = remember(query) { Strongs.normalize(query) } ?: return
-    var found by remember(number) { mutableStateOf<Pair<Strongs.Entry, List<String>>?>(null) }
-    LaunchedEffect(number) {
-        found = withContext(Dispatchers.Default) { state.strongs().let { s -> s.entry(number)?.let { it to s.renderings(number) } } }
-    }
-    val (e, renders) = found ?: return
-    Column(Modifier.fillMaxWidth().clickable { state.overlay = Overlay.Lexicon(number) }.padding(horizontal = 20.dp, vertical = 14.dp)) {
-        Text("${state.meta.ui("lex_strongs")} ${e.number}  ·  ${e.lemma}", color = c.accent, fontSize = 17.sp, fontWeight = FontWeight.Medium)
-        Text(listOf(e.transliteration, renders.joinToString(", ")).filter { it.isNotEmpty() }.joinToString(" — "), color = c.dim, fontSize = 14.sp)
-    }
-    HorizontalDivider(color = c.dim.copy(alpha = 0.2f))
-}
-
-/**
- * The Strong's tab: search the Hebrew and Greek lexicon by number, by an English word as the KJV
- * renders it, or by transliteration. Tapping an entry opens it (meaning and every verse). The
- * query is kept on [ReaderState] so it survives switching tabs, and dropped on lock.
- */
-@Composable
-fun StrongsPane(state: ReaderState, c: ReaderColors, touch: () -> Unit) {
-    var results by remember { mutableStateOf<List<Strongs.Match>?>(null) }
-    LaunchedEffect(state.lexQuery) {
-        val q = state.lexQuery.trim()
-        if (q.isEmpty()) { results = null; return@LaunchedEffect }
-        kotlinx.coroutines.delay(250)
-        results = withContext(Dispatchers.Default) { state.strongs().find(q) }
-    }
-    Column(Modifier.fillMaxSize().imePadding()) {
-        PrivateField(
-            hint = state.meta.ui("lex_hint"),
-            c = c,
-            onChange = { state.lexQuery = it; touch() },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            initial = state.lexQuery,
-            autoFocus = false,
-        )
-        val list = results
-        LazyColumn(Modifier.fillMaxSize()) {
-            when {
-                list == null -> item {
-                    Text(state.meta.ui("lex_intro"), color = c.dim, fontSize = 15.sp, lineHeight = 22.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
-                }
-                list.isEmpty() -> item {
-                    Text(state.meta.ui("lex_none"), color = c.dim, fontSize = 15.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
-                }
-                else -> items(list, key = { it.number }) { m ->
-                    Column(Modifier.fillMaxWidth().clickable { state.overlay = Overlay.Lexicon(m.number) }.padding(horizontal = 20.dp, vertical = 12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(m.lemma, color = c.text, fontSize = 20.sp)
-                            Spacer(Modifier.width(10.dp))
-                            Text(listOf(m.transliteration, m.number).filter { it.isNotEmpty() }.joinToString(" · "), color = c.dim, fontSize = 13.sp)
-                        }
-                        if (m.renderings.isNotEmpty()) {
-                            Text(m.renderings.joinToString(", "), color = c.dim, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    HorizontalDivider(color = c.dim.copy(alpha = 0.12f), modifier = Modifier.padding(horizontal = 20.dp))
-                }
-            }
+fun LexiconMatchRow(state: ReaderState, m: Strongs.Match, c: ReaderColors) {
+    Column(Modifier.fillMaxWidth().clickable { state.overlay = Overlay.Lexicon(m.number) }.padding(horizontal = 20.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(m.lemma, color = c.text, fontSize = 20.sp)
+            Spacer(Modifier.width(10.dp))
+            Text(listOf(m.transliteration, m.number).filter { it.isNotEmpty() }.joinToString(" · "), color = c.dim, fontSize = 13.sp)
+        }
+        if (m.renderings.isNotEmpty()) {
+            Text(m.renderings.joinToString(", "), color = c.dim, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
+    HorizontalDivider(color = c.dim.copy(alpha = 0.12f), modifier = Modifier.padding(horizontal = 20.dp))
 }

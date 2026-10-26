@@ -78,4 +78,17 @@ class ReaderTest {
         // Punctuation and case are ignored.
         assertTrue(idx.search("LORD'S").second > 0)
     }
+
+    @Test fun matchesFindTheSearchedWords() {
+        val text = "For God so loved the world, that he gave his only begotten Son"
+        val m = SearchIndex.matches(text, "only begotten son")
+        assertEquals(listOf("only", "begotten", "Son"), m.map { text.substring(it) })
+        assertEquals(listOf("loved"), SearchIndex.matches(text, "LOVED").map { text.substring(it) })
+        // Folded like the search: an apostrophe or accent in the text still matches.
+        val lord = "the LORD’s house"
+        assertEquals(listOf("LORD’s"), SearchIndex.matches(lord, "lords").map { lord.substring(it) })
+        assertEquals(listOf("Égypte"), SearchIndex.matches("en Égypte", "egypte").map { "en Égypte".substring(it) })
+        assertTrue(SearchIndex.matches(text, "  ").isEmpty())
+        assertTrue(SearchIndex.matches(text, "zzz").isEmpty())
+    }
 }

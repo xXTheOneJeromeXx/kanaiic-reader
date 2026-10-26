@@ -54,6 +54,7 @@ import com.tbce.calc.reader.Annotations
 import com.tbce.calc.reader.Overlay
 import com.tbce.calc.reader.Para
 import com.tbce.calc.reader.ReaderState
+import com.tbce.calc.reader.SearchIndex
 import com.tbce.calc.reader.Selection
 
 /** The five highlight tints, softer on dark themes. */
@@ -90,16 +91,19 @@ fun ParaText(p: Para, book: String, chapter: Int, base: TextStyle, c: ReaderColo
         "pc" -> TextAlign.Center
         else -> TextAlign.Start
     }
-    val text = remember(p, c, version, sel) {
+    val mark = state.mark?.takeIf { it.book == book && it.chapter == chapter }
+    val text = remember(p, c, version, sel, mark) {
+        // Behind each verse: its highlight, else a light tint if it was opened from Search.
+        val markBg = c.accent.copy(alpha = if (c.dark) 0.16f else 0.10f)
+        fun bg(v: Int) = a.highlight(book, chapter, v)?.let { highlightColor(it, c.dark) }
+            ?: if (mark != null && v in mark.verses) markBg else Color.Unspecified
         buildAnnotatedString {
             withStyle(ParagraphStyle(textIndent = indent, textAlign = align)) {
                 p.segs.forEachIndexed { i, s ->
-                    val hl = a.highlight(book, chapter, s.verse)
-                    val hlBg = hl?.let { highlightColor(it, c.dark) } ?: Color.Unspecified
+                    val hlBg = bg(s.verse)
                     if (i > 0) {
-                        // The gap between two verses with the same highlight is filled too.
-                        val prev = a.highlight(book, chapter, p.segs[i - 1].verse)
-                        withStyle(SpanStyle(background = if (hl != null && hl == prev) hlBg else Color.Unspecified)) { append(' ') }
+                        // The gap between two verses with the same background is filled too.
+                        withStyle(SpanStyle(background = if (hlBg != Color.Unspecified && hlBg == bg(p.segs[i - 1].verse)) hlBg else Color.Unspecified)) { append(' ') }
                     }
                     val start = length
                     if (s.start) {
@@ -113,7 +117,19 @@ fun ParaText(p: Para, book: String, chapter: Int, base: TextStyle, c: ReaderColo
                         background = hlBg,
                         textDecoration = if (selected) TextDecoration.Underline else null,
                     )
-                    withStyle(style) { append(s.text) }
+                    withStyle(style) {
+                        // The searched words stand out in the verses opened from Search.
+                        val words = if (mark != null && s.verse in mark.verses) SearchIndex.matches(s.text, mark.query) else emptyList()
+                        var last = 0
+                        for (r in words) {
+                            append(s.text, last, r.first)
+                            withStyle(SpanStyle(color = c.accent, fontWeight = FontWeight.Bold, background = c.accent.copy(alpha = if (c.dark) 0.30f else 0.22f))) {
+                                append(s.text, r.first, r.last + 1)
+                            }
+                            last = r.last + 1
+                        }
+                        append(s.text, last, s.text.length)
+                    }
                     if (s.verse > 0) addStringAnnotation(TAG_VERSE, s.verse.toString(), start, length)
                     // Note markers sit after the last verse a note covers.
                     val isLastSeg = p.segs.drop(i + 1).none { it.verse == s.verse }

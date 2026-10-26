@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -112,12 +113,13 @@ import com.tbce.calc.R
 import com.tbce.calc.reader.Block
 import com.tbce.calc.reader.Break
 import com.tbce.calc.reader.Heading
-import com.tbce.calc.reader.Hit
 import com.tbce.calc.reader.Overlay
 import com.tbce.calc.reader.Para
 import com.tbce.calc.reader.ReaderState
 import com.tbce.calc.reader.ReaderTheme
 import com.tbce.calc.reader.Ref
+import com.tbce.calc.reader.SearchIndex
+import com.tbce.calc.reader.SearchResults
 import com.tbce.calc.reader.Tab
 import com.tbce.calc.reader.Title
 import kotlinx.coroutines.Dispatchers
@@ -194,14 +196,19 @@ fun ReaderScreen(app: AppController) {
         createDoc.launch("calc-data")
     }
 
-    BackHandler {
+    // One screen back: the book picker, the verse selection, then the screens left by switching
+    // tabs or jumping to a passage. False when there is nowhere left to go.
+    val goBack = {
         when {
-            showPicker -> showPicker = false
-            state.selection != null -> state.selection = null
-            state.tab != Tab.READ -> state.tab = Tab.READ
-            else -> app.lock()
+            showPicker -> { showPicker = false; true }
+            state.selection != null -> { state.selection = null; true }
+            state.back() -> true
+            state.tab != Tab.READ -> { state.tab = Tab.READ; true }
+            else -> false
         }
     }
+    // Back with nowhere left to go locks, as before.
+    BackHandler { if (!goBack()) app.lock() }
 
     // Idle lock: any touch or typing resets the clock.
     LaunchedEffect(lastActivity) {
@@ -221,7 +228,7 @@ fun ReaderScreen(app: AppController) {
     )
     // The keyboard belongs to the search field only.
     LaunchedEffect(state.tab, showPicker, state.overlay) {
-        if ((state.tab != Tab.SEARCH && state.tab != Tab.STRONGS && state.overlay == null) || showPicker) {
+        if ((state.tab != Tab.SEARCH && state.overlay == null) || showPicker) {
             (view.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
                 .hideSoftInputFromWindow(view.windowToken, 0)
         }
@@ -256,13 +263,12 @@ fun ReaderScreen(app: AppController) {
             },
     ) {
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
-            TopBar(app, state, c, onPicker = { showPicker = true })
+            TopBar(state, c, onBack = { goBack() }, onPicker = { showPicker = true })
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when (state.tab) {
                     Tab.READ -> ReadPane(state, c)
                     Tab.SAVED -> SavedPane(state, c, touch)
                     Tab.SEARCH -> SearchPane(state, c, touch)
-                    Tab.STRONGS -> StrongsPane(state, c, touch)
                     Tab.SETTINGS -> SettingsPane(app, state, c, startImport)
                 }
             }
@@ -298,15 +304,17 @@ fun ReaderScreen(app: AppController) {
 }
 
 @Composable
-private fun TopBar(app: AppController, state: ReaderState, c: ReaderColors, onPicker: () -> Unit) {
+private fun TopBar(state: ReaderState, c: ReaderColors, onBack: () -> Unit, onPicker: () -> Unit) {
     var menu by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Not keyboard-focusable, so a stray Enter or Space can't trigger it.
-        IconButton(onClick = { app.lock() }, modifier = Modifier.focusProperties { canFocus = false }) {
-            Icon(painterResource(R.drawable.ic_hide), contentDescription = "Hide", tint = c.dim)
+        // Back one screen; faded when there is nowhere to go back to. Not keyboard-focusable, so a
+        // stray Enter or Space can't trigger it.
+        val canGoBack = state.selection != null || state.canGoBack || state.tab != Tab.READ
+        IconButton(onClick = onBack, enabled = canGoBack, modifier = Modifier.focusProperties { canFocus = false }) {
+            Icon(painterResource(R.drawable.ic_back), contentDescription = "Back", tint = if (canGoBack) c.text else c.dim.copy(alpha = 0.35f))
         }
         if (state.tab == Tab.READ) {
             val (book, ch) = state.location()
@@ -319,7 +327,7 @@ private fun TopBar(app: AppController, state: ReaderState, c: ReaderColors, onPi
             )
         } else {
             Text(
-                when (state.tab) { Tab.SAVED -> "Saved"; Tab.SEARCH -> "Search"; Tab.STRONGS -> state.meta.ui("lex_strongs"); else -> "Settings" },
+                when (state.tab) { Tab.SAVED -> "Saved"; Tab.SEARCH -> "Search"; else -> "Settings" },
                 color = c.text, fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(horizontal = 8.dp),
             )
         }
@@ -353,10 +361,10 @@ private fun TopBar(app: AppController, state: ReaderState, c: ReaderColors, onPi
 private fun BottomBar(state: ReaderState, c: ReaderColors) {
     HorizontalDivider(color = c.dim.copy(alpha = 0.2f))
     Row(Modifier.fillMaxWidth().height(56.dp)) {
-        for ((tab, label) in listOf(Tab.READ to "Read", Tab.SAVED to "Saved", Tab.SEARCH to "Search", Tab.STRONGS to state.meta.ui("lex_strongs"), Tab.SETTINGS to "Settings")) {
+        for ((tab, label) in listOf(Tab.READ to "Read", Tab.SAVED to "Saved", Tab.SEARCH to "Search", Tab.SETTINGS to "Settings")) {
             val selected = state.tab == tab
             Box(
-                Modifier.weight(1f).fillMaxSize().clickable { state.tab = tab },
+                Modifier.weight(1f).fillMaxSize().clickable { state.open(tab) },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(label, color = if (selected) c.accent else c.dim, fontSize = 15.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
@@ -376,7 +384,7 @@ private fun ReadPane(state: ReaderState, c: ReaderColors) {
     }
     LaunchedEffect(pager) {
         snapshotFlow { pager.settledPage }.collect {
-            if (it != state.position) { state.position = it; state.pendingVerse = 0; state.selection = null }
+            if (it != state.position) { state.position = it; state.pendingVerse = 0; state.selection = null; state.mark = null }
             val (b, ch) = state.location(it)
             state.annotations.visit(b.code, ch)
         }
@@ -523,33 +531,47 @@ private fun Picker(state: ReaderState, c: ReaderColors, close: () -> Unit) {
 
 // ---------------------------------------------------------------- search
 
+/**
+ * Search: words in the current translation, a reference to go to, and the Strong's lexicon (a
+ * number, an English word as the KJV renders it, or a transliteration). The query, results and
+ * scroll position are kept on [ReaderState], so Back from a result returns to them.
+ */
 @Composable
 private fun SearchPane(state: ReaderState, c: ReaderColors, touch: () -> Unit) {
-    var query by remember { mutableStateOf("") }
-    var hits by remember { mutableStateOf<List<Hit>>(emptyList()) }
-    var count by remember { mutableIntStateOf(0) }
+    val query = state.searchQuery
     var busy by remember { mutableStateOf(false) }
+    var allEntries by remember(query) { mutableStateOf(false) }
     val t = state.translation
     val ref = remember(query) { state.references.parse(query) }
 
     LaunchedEffect(query, t.id) {
-        delay(300)
         val q = query.trim()
-        if (q.length < 2) { hits = emptyList(); count = 0; return@LaunchedEffect }
+        if (state.searchResults?.let { it.query == q && it.translation == t.id } == true) return@LaunchedEffect
+        delay(300)
+        if (q.length < 2) { state.searchResults = null; return@LaunchedEffect }
         busy = true
-        val (h, n) = withContext(Dispatchers.Default) { state.searchIndex().search(q) }
-        hits = h; count = n; busy = false
+        state.searchResults = withContext(Dispatchers.Default) {
+            val (h, n) = state.searchIndex().search(q)
+            SearchResults(q, t.id, h, n, state.strongs().find(q))
+        }
+        busy = false
     }
 
     Column(Modifier.fillMaxSize().imePadding()) {
         PrivateField(
             hint = state.meta.ui("search_hint"),
             c = c,
-            onChange = { query = it; touch() },
+            onChange = { state.searchQuery = it; touch() },
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            initial = query,
+            // Coming back to earlier results, leave the keyboard down so they can be seen.
+            autoFocus = query.isEmpty(),
         )
-        LazyColumn(Modifier.fillMaxSize()) {
-            item { StrongsSearchRow(state, query, c) }
+        val r = state.searchResults?.takeIf { query.trim().length >= 2 }
+        LazyColumn(Modifier.fillMaxSize(), state = state.searchList) {
+            if (query.trim().length < 2) item {
+                Text(state.meta.ui("search_intro"), color = c.dim, fontSize = 15.sp, lineHeight = 22.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+            }
             if (ref != null) {
                 item {
                     val name = t.books.firstOrNull { it.code == ref.book }?.name ?: ref.book
@@ -560,25 +582,38 @@ private fun SearchPane(state: ReaderState, c: ReaderColors, touch: () -> Unit) {
                     }
                     Text(
                         label, color = c.accent, fontSize = 17.sp, fontWeight = FontWeight.Medium,
-                        modifier = Modifier.fillMaxWidth().clickable { state.goTo(ref) }.padding(horizontal = 20.dp, vertical = 14.dp),
+                        modifier = Modifier.fillMaxWidth().clickable { state.goTo(ref, "") }.padding(horizontal = 20.dp, vertical = 14.dp),
                     )
                     HorizontalDivider(color = c.dim.copy(alpha = 0.2f))
                 }
             }
-            if (busy) item { Text("Searching…", color = c.dim, modifier = Modifier.padding(20.dp)) }
-            else if (query.trim().length >= 2) item {
-                Text(
-                    if (count == 0) state.meta.ui("no_results") else "$count ${state.meta.ui("results")}" + if (count > hits.size) " (first ${hits.size})" else "",
-                    color = c.dim, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                )
+            if (r == null) {
+                if (busy) item { Text("Searching…", color = c.dim, modifier = Modifier.padding(20.dp)) }
+                return@LazyColumn
             }
-            itemsIndexed(hits) { _, h ->
+            if (r.entries.isNotEmpty()) {
+                item { SearchLabel(state.meta.ui("lex_strongs"), c) }
+                val shown = if (allEntries) r.entries else r.entries.take(SHOWN_ENTRIES)
+                items(shown, key = { "s" + it.number }) { m -> LexiconMatchRow(state, m, c) }
+                if (shown.size < r.entries.size) item {
+                    Text(
+                        state.meta.ui("lex_more").replace("{n}", "${r.entries.size}"), color = c.accent, fontSize = 15.sp,
+                        modifier = Modifier.fillMaxWidth().clickable { allEntries = true }.padding(horizontal = 20.dp, vertical = 12.dp),
+                    )
+                }
+            }
+            if (r.count > 0) item {
+                SearchLabel("${state.meta.ui("search_verses")} · ${r.count} ${state.meta.ui("results")}" + if (r.count > r.hits.size) " (first ${r.hits.size})" else "", c)
+            } else if (r.entries.isEmpty() && ref == null) item {
+                Text(state.meta.ui("no_results"), color = c.dim, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
+            }
+            itemsIndexed(r.hits) { _, h ->
                 val book = t.books[h.book]
                 Column(
-                    Modifier.fillMaxWidth().clickable { state.goTo(Ref(book.code, h.chapter, h.verse)) }.padding(horizontal = 20.dp, vertical = 10.dp),
+                    Modifier.fillMaxWidth().clickable { state.goTo(Ref(book.code, h.chapter, h.verse), r.query) }.padding(horizontal = 20.dp, vertical = 10.dp),
                 ) {
                     Text("${book.name} ${h.chapter}:${h.verse}", color = c.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    Text(highlight(h.text, query, c), color = c.text, fontSize = 16.sp, lineHeight = 22.sp,
+                    Text(highlight(h.text, r.query, c), color = c.text, fontSize = 16.sp, lineHeight = 22.sp,
                         fontFamily = state.typeface?.let { FontFamily(it) } ?: FontFamily.Serif)
                 }
             }
@@ -586,19 +621,23 @@ private fun SearchPane(state: ReaderState, c: ReaderColors, touch: () -> Unit) {
     }
 }
 
-private fun highlight(text: String, query: String, c: ReaderColors): AnnotatedString {
-    val words = query.split(Regex("\\W+")).filter { it.length >= 2 }
-    if (words.isEmpty()) return AnnotatedString(text)
-    val rx = Regex(words.joinToString("|") { Regex.escape(it) }, RegexOption.IGNORE_CASE)
-    return buildAnnotatedString {
-        var last = 0
-        for (m in rx.findAll(text)) {
-            append(text, last, m.range.first)
-            withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = c.accent)) { append(m.value) }
-            last = m.range.last + 1
-        }
-        append(text, last, text.length)
+/** Strong's entries shown before "show all". */
+private const val SHOWN_ENTRIES = 3
+
+@Composable
+private fun SearchLabel(text: String, c: ReaderColors) {
+    Text(text.uppercase(), color = c.dim, fontSize = 12.sp, letterSpacing = 1.5.sp, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 4.dp))
+}
+
+/** [text] with [query]'s words in bold, matched as the search matches them. */
+private fun highlight(text: String, query: String, c: ReaderColors): AnnotatedString = buildAnnotatedString {
+    var last = 0
+    for (m in SearchIndex.matches(text, query)) {
+        append(text, last, m.first)
+        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = c.accent)) { append(text, m.first, m.last + 1) }
+        last = m.last + 1
     }
+    append(text, last, text.length)
 }
 
 /** Text field that asks the keyboard not to learn, suggest or autofill, and blocks copy. */
@@ -643,11 +682,13 @@ fun PrivateField(
                 }
                 customSelectionActionModeCallback = block
                 customInsertionActionModeCallback = block
-                addTextChangedListener(object : TextWatcher {
+                val watcher = object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, n: Int) {}
                     override fun onTextChanged(s: CharSequence?, a: Int, b: Int, n: Int) {}
                     override fun afterTextChanged(s: Editable?) { onChange(s?.toString() ?: "") }
-                })
+                }
+                addTextChangedListener(watcher)
+                tag = watcher
                 if (autoFocus) post {
                     requestFocus()
                     (ctx.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager)
@@ -656,7 +697,8 @@ fun PrivateField(
             }
         },
         update = { it.setTextColor(c.text.toArgb()); it.setHintTextColor(c.dim.toArgb()) },
-        onRelease = { it.text.clear() },
+        // Wipes the field's copy of the text without reporting it as typed, so a kept query survives.
+        onRelease = { (it.tag as? TextWatcher)?.let(it::removeTextChangedListener); it.text.clear() },
     )
 }
 

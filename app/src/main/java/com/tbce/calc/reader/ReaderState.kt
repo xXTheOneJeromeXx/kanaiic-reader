@@ -3,9 +3,11 @@ package com.tbce.calc.reader
 import android.content.Context
 import android.graphics.Typeface
 import android.os.Build
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.tbce.calc.vault.VaultSession
@@ -13,7 +15,13 @@ import org.json.JSONObject
 import java.io.File
 
 enum class ReaderTheme { PAPER, SEPIA, DARK, BLACK }
-enum class Tab { READ, SAVED, SEARCH, STRONGS, SETTINGS }
+enum class Tab { READ, SAVED, SEARCH, SETTINGS }
+
+/** Verses opened from Search, shown marked in the reader; [query]'s words are picked out in them. */
+data class Mark(val book: String, val chapter: Int, val verses: IntRange, val query: String)
+
+/** The last search: matching verses (first [hits], [count] in all) and Strong's [entries]. */
+class SearchResults(val query: String, val translation: String, val hits: List<Hit>, val count: Int, val entries: List<Strongs.Match>)
 
 /** Verses picked in the reader, in order; they need not be next to each other. [last] is the latest tap. */
 data class Selection(val book: String, val chapter: Int, val verses: List<Int>, val last: Int)
@@ -95,8 +103,43 @@ class ReaderState(context: Context, private val session: VaultSession, systemDar
 
     private var strongsData: Strongs? = null
 
-    /** What is typed in the Strong's tab, kept while switching tabs. */
-    var lexQuery by mutableStateOf("")
+    /** What is typed in the Search tab, and where its results are scrolled, kept while switching tabs. */
+    var searchQuery by mutableStateOf("")
+    var searchResults by mutableStateOf<SearchResults?>(null)
+    val searchList = LazyListState()
+
+    /** Verses to mark in the reader after opening a search result; cleared on swiping to another chapter. */
+    var mark by mutableStateOf<Mark?>(null)
+
+    /** Screens Back returns to, newest last: left by switching tabs and by jumps to a passage. */
+    private class Screen(val tab: Tab, val position: Int, val overlay: Overlay?)
+    private val history = mutableStateListOf<Screen>()
+    val canGoBack get() = history.isNotEmpty()
+
+    private fun push() {
+        history += Screen(tab, position, overlay)
+        if (history.size > MAX_HISTORY) history.removeAt(0)
+    }
+
+    /** Switches tab, remembering the current screen for Back. */
+    fun open(t: Tab) {
+        if (t == tab) return
+        push()
+        selection = null
+        tab = t
+    }
+
+    /** Returns to the previous screen; false when there is none. */
+    fun back(): Boolean {
+        if (history.isEmpty()) return false
+        val s = history.removeAt(history.lastIndex)
+        selection = null
+        pendingVerse = 0
+        tab = s.tab
+        position = s.position
+        overlay = s.overlay
+        return true
+    }
 
     /** Strong's numbers, loaded on first use; dropped with the rest on lock. */
     fun strongs(): Strongs = synchronized(this) {
@@ -117,10 +160,16 @@ class ReaderState(context: Context, private val session: VaultSession, systemDar
         index!!
     }
 
-    fun goTo(ref: Ref) {
+    /**
+     * Opens [ref] in the reader. With [query] (from Search; "" for a reference or a lexicon verse)
+     * its verses are marked and the query's words picked out in them.
+     */
+    fun goTo(ref: Ref, query: String? = null) {
         val t = translation
         val b = t.bookIndex(ref.book)
         if (b < 0) return
+        push()
+        mark = if (query != null && ref.verse > 0) Mark(ref.book, ref.chapter, ref.verse..maxOf(ref.verse, ref.verseEnd), query) else null
         position = t.globalIndex(b, ref.chapter.coerceIn(1, t.books[b].chapters))
         pendingVerse = ref.verse
         selection = null
@@ -207,6 +256,10 @@ class ReaderState(context: Context, private val session: VaultSession, systemDar
         annotations.clear()
         selection = null
         overlay = null
+        mark = null
+        searchQuery = ""
+        searchResults = null
+        history.clear()
         synchronized(cache) { cache.clear() }
         synchronized(this) { index = null; indexFor = null; strongsData = null }
         fontFile.delete()
@@ -227,6 +280,7 @@ class ReaderState(context: Context, private val session: VaultSession, systemDar
             return parts.joinToString(", ")
         }
 
+        private const val MAX_HISTORY = 50
         private const val SETTINGS = "settings"
         private const val ANNOTATIONS = "notes"
     }

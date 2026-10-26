@@ -59,6 +59,45 @@ class SearchIndex private constructor(
             return out.map { it.key to it.value.toString() }
         }
 
+        /**
+         * Where [query]'s words occur in [text], matched as [search] matches them (folded, so
+         * "lords" finds "Lord's"). Ranges index into [text], sorted, overlaps merged.
+         */
+        fun matches(text: String, query: String): List<IntRange> {
+            val words = fold(query).split(' ').filter { it.isNotEmpty() }
+            if (words.isEmpty()) return emptyList()
+            // Fold [text] the way [fold] does, remembering which character each folded one came from.
+            val folded = StringBuilder(text.length)
+            val from = ArrayList<Int>(text.length)
+            var space = true
+            for (i in text.indices) {
+                for (ch in Normalizer.normalize(text[i].lowercase(), Normalizer.Form.NFD)) {
+                    when {
+                        Character.getType(ch) == Character.NON_SPACING_MARK.toInt() -> {}
+                        ch == '’' || ch == '\'' -> {}
+                        ch.isLetterOrDigit() -> { folded.append(ch); from += i; space = false }
+                        !space -> { folded.append(' '); from += i; space = true }
+                    }
+                }
+            }
+            val found = ArrayList<IntRange>()
+            for (w in words) {
+                var at = folded.indexOf(w)
+                while (at >= 0) {
+                    found += from[at]..from[at + w.length - 1]
+                    at = folded.indexOf(w, at + 1)
+                }
+            }
+            found.sortBy { it.first }
+            val merged = ArrayList<IntRange>()
+            for (r in found) {
+                val last = merged.lastOrNull()
+                if (last != null && r.first <= last.last + 1) merged[merged.lastIndex] = last.first..maxOf(last.last, r.last)
+                else merged += r
+            }
+            return merged
+        }
+
         /** Lower case, accents and punctuation removed, so "Lord's" matches "lords". */
         fun fold(s: String): String {
             val d = Normalizer.normalize(s.lowercase(), Normalizer.Form.NFD)

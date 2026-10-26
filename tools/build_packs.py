@@ -67,7 +67,10 @@ ALIASES = {
 UI = {
     "book": "Book", "chapter": "Chapter", "ot": "Old Testament", "nt": "New Testament",
     "translation": "Translation", "about": "About these texts", "guide": "How this app works",
-    "search_hint": "Search, a reference like John 3:16, or a Strong's number like G26",
+    "search_hint": "Words, a reference like John 3:16, or Strong's (G26, agape)",
+    # Search and Strong's in one tab (1.10).
+    "search_intro": "Type words to find every verse that has them in this translation, or a reference like John 3:16 or 1 cor 13:4-7 to go there. Tap a verse to open it with your words marked.\n\nThe same search looks up Strong's, which numbers the Hebrew and Greek words of the Bible: by number (H430, G26), by an English word as the King James Version translates it (love, light), or by the original word's transliteration (agape, elohiym). Tap an entry for its meaning and every verse that uses it.\n\nTo see the words of a particular verse, select the verse while reading and tap Strong's.",
+    "search_verses": "Verses", "lex_more": "Show all {n}",
     "go_to": "Go to", "no_results": "No matches", "results": "matches", "loading": "Loading…",
     # Strong's numbers (1.4).
     "orig": "Strong's", "orig_none": "No original-language words are listed here.",
@@ -75,9 +78,6 @@ UI = {
     "lex_strongs": "Strong's", "lex_hebrew": "Hebrew", "lex_greek": "Greek",
     "lex_meaning": "Strong's definition", "lex_kjv": "KJV renderings (Strong's)",
     "lex_renders": "Translated in the KJV as", "lex_verses": "Used in {n} verses",
-    "lex_hint": "Search: a number like H430 or G26, an English word, or a transliteration",
-    "lex_intro": "Strong's numbers the Hebrew and Greek words of the Bible. Search here by number, by an English word as the King James Version translates it (love, light), or by the original word's transliteration (agape, elohiym). Tap an entry for its meaning and every verse that uses it.\n\nTo see the words of a particular verse, select the verse while reading and tap Strong's.",
-    "lex_none": "No entries match.",
     # Setup and code screens: kept out of the APK so they don't describe the hidden gesture.
     "code_new": "Choose a code", "code_again": "Enter the code again", "code_change": "Choose a new code",
     "code_min": "Use at least {min} digits. {good} or more is better.",
