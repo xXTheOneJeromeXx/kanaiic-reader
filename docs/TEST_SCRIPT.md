@@ -44,8 +44,8 @@ Play (`app-play-*.apk`):
 
 ## Locking
 
-1. Each of these locks back to the front screen: Home, screen off, Back on the main screen,
-   **Hide** at top left, double-tap the top-left corner, 60 s without touching.
+1. Each of these locks back to the front screen: Home, screen off, Back with nowhere left to
+   go back to, double-tap the top-left corner, 60 s without touching.
 2. Recents while open shows a blank card; a screenshot while open is black (release build).
 3. Kanaiic Reader face: a wrong code says so; the right one opens.
 4. Dictionary face: a quick tap of Search looks the word up; letting go before 3 s also
@@ -57,9 +57,15 @@ Play (`app-play-*.apk`):
 
 1. Tap the title, pick Psalms 23: poetry lines indent. Swipe for next and previous chapter.
 2. Switch to KJV and WEB from the chip at top right: same passage.
-3. Search "jn 3:16", tap "Go to John 3:16"; search "still waters": matches highlighted.
-4. Settings: each theme, text size and spacing change the text; About lists the sources.
-5. Lock and open again: same translation, place, theme and size.
+3. Search "jn 3:16", tap "Go to John 3:16": the reader opens on it with the verse tinted.
+   Search "still waters": matches highlighted; tap Psalm 23:2: the verse is tinted and "still"
+   and "waters" stand out. Swipe to the next chapter and back: the marks are gone.
+4. Back arrow (top left): from that verse it returns to the results, query kept, same scroll,
+   keyboard down. Read > Saved > Settings, then the arrow twice: Saved, then Read. Pick another
+   chapter in the book picker, then the arrow: the previous chapter. With nowhere to go back
+   to, the arrow is faded and does nothing; system Back there locks.
+5. Settings: each theme, text size and spacing change the text; About lists the sources.
+6. Lock and open again: same translation, place, theme and size.
 
 ## Highlights, notes, Saved
 
@@ -75,9 +81,10 @@ Play (`app-play-*.apk`):
 1. Select John 3:16, tap **Strong's**: each KJV word with its Greek word, transliteration,
    number and renderings.
 2. Tap "loved": the G25 entry, linked numbers, renderings with counts, 109 verses.
-3. Strong's tab: "love" lists G26, H157, G25 near the top; "agape" and "G26" find G26; Back
-   from an entry returns to the results with the query kept. Search tab: "H3068" offers the
-   entry (5519 verses; scrolls smoothly).
+3. Search tab (there is no separate Strong's tab): "love" lists G26, H157, G25 under STRONG'S
+   with "Show all", then the verses; "agape" and "G26" find G26; Back from an entry returns to
+   the results with the query kept. "H3068" offers the entry (5519 verses; scrolls smoothly);
+   tapping one of its verses opens it tinted, and the arrow returns to the entry.
 
 ## Dictionary disguise
 
