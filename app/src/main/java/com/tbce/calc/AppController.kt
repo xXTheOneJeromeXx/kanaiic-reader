@@ -48,10 +48,45 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
     var keypadOpen by mutableStateOf(false)
         private set
 
-    /** The hold on Search: the keypad, or setup on a fresh install. */
+    /** The hold on Search: the keypad, setup on a fresh install, or straight in without a code. */
     fun faceHold() {
         if (!vault.exists()) { screen = Screen.SETUP; return }
+        if (!hasCode) { openWithoutCode(); return }
         keypadOpen = true
+    }
+
+    /**
+     * Whether the vault asks for a code. Off when the user chose to use the app without one;
+     * then the reader face has an Open button and the Dictionary's hold opens straight in.
+     */
+    var hasCode by mutableStateOf(vault.hasCode() || !vault.exists())
+        private set
+
+    /** Opens a vault set up without a code. Does nothing if it has one. */
+    fun openWithoutCode() {
+        if (!vault.exists() || hasCode || opening) return
+        opening = true
+        val gen = generation
+        scope.launch {
+            val s = withContext(Dispatchers.Default) { vault.unlockWithoutCode() }
+            opening = false
+            if (s == null) { hasCode = vault.hasCode(); return@launch }
+            if (gen != generation) { s.wipe(); return@launch }
+            open(s)
+        }
+    }
+
+    /** True while [openWithoutCode] is working. */
+    var opening by mutableStateOf(false)
+        private set
+
+    /**
+     * Coming back to the app (a cold start, or after the screen was off or another app was in
+     * front). With no code on the app's own face there is nothing to type, so it opens at once.
+     * A lock from inside the app (Back, the corner, the idle timer) stays on the front screen.
+     */
+    fun onForeground() {
+        if (screen == Screen.FRONT && disguise == Disguise.READER && !hasCode) openWithoutCode()
     }
 
     fun closeKeypad() { keypadOpen = false }
@@ -89,6 +124,7 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
     suspend fun finishSetup(code: ByteArray): Boolean {
         val gen = generation
         val s = withContext(Dispatchers.Default) { vault.create(code) }
+        hasCode = code.isNotEmpty()
         if (gen != generation) { s.wipe(); return false }
         // A first code set on the app's own face: the reader offers to disguise the app now.
         offerDisguise = disguise == Disguise.READER
@@ -120,10 +156,11 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
 
     fun setWipeEnabled(enabled: Boolean) = vault.setWipeEnabled(enabled)
 
-    /** Re-wraps the vault key under [code]. The caller zeros [code]. */
+    /** Re-wraps the vault key under [code]; an empty [code] removes it. The caller zeros [code]. */
     suspend fun changeCode(code: ByteArray) {
         val s = session ?: return
         withContext(Dispatchers.Default) { vault.changeCode(s, code) }
+        hasCode = code.isNotEmpty()
     }
 
     /** Before-lock hook so the vault screen can save what is on it. */
@@ -144,6 +181,7 @@ class AppController(private val vault: KeyVault, private val scope: CoroutineSco
     fun eraseEverything() {
         lock()
         vault.erase()
+        hasCode = true
     }
 
     fun onBackground() {

@@ -8,6 +8,9 @@ object Config {
     /** Idle time inside the vault before it locks. */
     const val IDLE_LOCK_MS = 60_000L
 
+    /** "Keep the screen on" choices in minutes without a touch; 0 is off (the phone sleeps as usual). */
+    val KEEP_AWAKE_CHOICES = listOf(0, 5, 15, 30)
+
     const val MIN_CODE_DIGITS = 6
     const val GOOD_CODE_DIGITS = 8
     const val MAX_CODE_DIGITS = 16

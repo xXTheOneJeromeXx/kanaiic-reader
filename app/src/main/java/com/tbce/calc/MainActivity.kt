@@ -65,6 +65,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         handler.removeCallbacks(graceLock)
+        // Without a code, the app's own face opens straight away.
+        app.onForeground()
     }
 
     /**

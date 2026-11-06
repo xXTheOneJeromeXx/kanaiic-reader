@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +68,7 @@ fun SetupScreen(app: AppController) {
         face = app.disguise,
         onDone = { code -> app.finishSetup(code) },
         onCancel = { app.cancelSetup() },
+        onNoCode = { app.finishSetup(ByteArray(0)) },
     )
 }
 
@@ -75,7 +77,8 @@ class CodeColors(val bg: androidx.compose.ui.graphics.Color, val text: androidx.
 /**
  * Enter a new code twice on a number pad. Used for first-run setup and for changing the code.
  * Wording comes from the encrypted pack ([ui]); the "how to open" hint is the one for [face].
- * [onDone] gets the code and must not keep it.
+ * [onDone] gets the code and must not keep it. With [onNoCode], the first step also offers to
+ * go on without a code.
  */
 @Composable
 fun CodeEntry(
@@ -85,6 +88,7 @@ fun CodeEntry(
     face: Disguise,
     onDone: suspend (ByteArray) -> Unit,
     onCancel: () -> Unit,
+    onNoCode: (suspend () -> Unit)? = null,
 ) {
     fun t(k: String) = (ui[k] ?: "").replace("{min}", "${Config.MIN_CODE_DIGITS}").replace("{good}", "${Config.GOOD_CODE_DIGITS}")
     val scope = rememberCoroutineScope()
@@ -93,6 +97,7 @@ fun CodeEntry(
     var stage by remember { mutableStateOf(Stage.ENTER) }
     var count by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf("") }
+    var askNoCode by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) { onDispose { first.wipe(); second.wipe() } }
     BackHandler(onBack = onCancel)
@@ -181,13 +186,38 @@ fun CodeEntry(
                     Key("0", KeyStyle.NUMBER, 26.sp, Modifier.weight(1f).fillMaxSize()) { current.add(0); count++ }
                     Key("Next", KeyStyle.EQUALS, 20.sp, Modifier.weight(1f).fillMaxSize()) { next() }
                 }
-                TextButton(onClick = onCancel, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("Cancel", color = colors.dim)
+                Row(Modifier.align(Alignment.CenterHorizontally)) {
+                    TextButton(onClick = onCancel) { Text("Cancel", color = colors.dim) }
+                    if (onNoCode != null && stage == Stage.ENTER) {
+                        TextButton(onClick = { askNoCode = true }) { Text("Use without a code", color = colors.dim) }
+                    }
                 }
             }
         }
     }
+    if (askNoCode && onNoCode != null) {
+        AlertDialog(
+            onDismissRequest = { askNoCode = false },
+            title = { Text("Use without a code?") },
+            text = { Text(NO_CODE_WARNING) },
+            confirmButton = {
+                TextButton(onClick = {
+                    askNoCode = false
+                    first.wipe(); second.wipe()
+                    stage = Stage.WORKING
+                    scope.launch { onNoCode() }
+                }) { Text("No code") }
+            },
+            dismissButton = { TextButton(onClick = { askNoCode = false }) { Text("Choose a code") } },
+        )
+    }
 }
+
+/** What going without a code means, shown before it is chosen at setup or in Settings. */
+const val NO_CODE_WARNING =
+    "Anyone who can use your phone will be able to open it, with nothing to type. " +
+        "Your notes stay encrypted on this phone, and you can set a code at any time in Settings > Security."
+
 
 /** Pack key for how to open the reader from [face], e.g. "code_how_dictionary". */
 fun howKey(face: Disguise) = "code_how_" + face.name.lowercase()

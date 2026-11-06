@@ -68,14 +68,20 @@ c0         = version | salt | m | t | p | GCM_KEK_device( GCM_KEK_code( DEK ) )
   `HMAC(DEK,"enc")` and file names `HMAC(HMAC(DEK,"name"), item)`, truncated to 16 hex.
 - Each stored item is `nonce12 || AES-256-GCM(content)` with the file name as AAD.
 - Change code re-wraps the DEK with a fresh salt; no bulk re-encryption.
+- No code (optional, from 1.11): the DEK is wrapped the same way with an empty code, so only
+  `KEK_device` protects it, and `c1` records that no code is asked for. Data is still
+  encrypted at rest and bound to this phone's Keystore, but anyone who can use the unlocked
+  phone can open the reader. Setting a code again re-wraps the DEK under it.
+  `KeyVaultTest.codeCanBeRemovedAndSetAgain`.
 - Crypto-erase deletes `c0`, `c1` and the Keystore key, then the data directory.
-- Lock (background, screen off, idle 60 s, Back, panic button, corner double-tap) saves,
+- Lock (background, screen off, idle 60 s or the "Keep the screen on" time, Back, panic button, corner double-tap) saves,
   zeros the DEK and derived keys, drops decrypted text, the search index and the font file.
   `VaultSession.wipe` + `KeyVaultTest.wipeZerosKeys`.
 
 ### Failed attempts (Q15)
 
-- `c1` = `GCM_KEK_device(enabled byte | consecutive failures)`. Rewritten after every
+- `c1` = `GCM_KEK_device(enabled byte | consecutive failures | no-code byte)` (the last byte
+  is new in 1.11; older files without it read as "a code is set"). Rewritten after every
   submitted attempt, right or wrong, so a failure makes no extra disk write. Opt-in; at 10 in
   a row the vault crypto-erases. Only codes submitted from a code pad count.
 

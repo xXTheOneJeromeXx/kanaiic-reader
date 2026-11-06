@@ -210,14 +210,25 @@ fun ReaderScreen(app: AppController) {
     // Back with nowhere left to go locks, as before.
     BackHandler { if (!goBack()) app.lock() }
 
-    // Idle lock: any touch or typing resets the clock.
-    LaunchedEffect(lastActivity) {
-        delay(Config.IDLE_LOCK_MS)
-        app.lock()
+    val view = LocalView.current
+    // Idle lock: any touch or typing resets the clock. With "Keep the screen on", the screen
+    // stays on and the clock runs for that long instead. Without a code on the app's own face
+    // there is nothing to hide behind, so the clock only lets the screen sleep again.
+    val awakeMs = state.awakeMinutes * 60_000L
+    val idleLocks = app.hasCode || app.disguise != Disguise.READER
+    var screenOn by remember { mutableStateOf(true) }
+    LaunchedEffect(lastActivity, awakeMs, idleLocks) {
+        screenOn = true
+        delay(if (awakeMs > 0) awakeMs else Config.IDLE_LOCK_MS)
+        if (idleLocks) app.lock() else screenOn = false
+    }
+    val keepOn = awakeMs > 0 && screenOn
+    DisposableEffect(view, keepOn) {
+        view.keepScreenOn = keepOn
+        onDispose { view.keepScreenOn = false }
     }
 
     val c = readerColors(state.theme)
-    val view = LocalView.current
     val density = LocalDensity.current
     val layoutDir = LocalLayoutDirection.current
     val insets = WindowInsets.safeDrawing
@@ -286,7 +297,12 @@ fun ReaderScreen(app: AppController) {
                 colors = CodeColors(c.bg, c.text, c.dim),
                 changing = true,
                 face = app.disguise,
-                onDone = { code -> app.changeCode(code); state.overlay = null; state.notice = "Code changed. Use the new code from now on." },
+                onDone = { code ->
+                    val had = app.hasCode
+                    app.changeCode(code)
+                    state.overlay = null
+                    state.notice = if (had) "Code changed. Use the new code from now on." else "Code set. You'll need it to open the app from now on."
+                },
                 onCancel = { state.overlay = null },
             )
             null -> {}
@@ -724,7 +740,7 @@ private fun SettingsPane(app: AppController, state: ReaderState, c: ReaderColors
         // Always shown first, so the way in is never more than a tap away.
         Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 12.dp).clip(RoundedCornerShape(12.dp)).background(c.surface).padding(14.dp)) {
             Text(state.meta.ui("how_title"), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text(state.meta.ui(howToOpen(app.disguise)), color = c.text, fontSize = 15.sp, lineHeight = 21.sp, modifier = Modifier.padding(top = 6.dp))
+            Text(howToOpenText(app, state, app.disguise), color = c.text, fontSize = 15.sp, lineHeight = 21.sp, modifier = Modifier.padding(top = 6.dp))
         }
         Label("Theme", c)
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -757,6 +773,27 @@ private fun SettingsPane(app: AppController, state: ReaderState, c: ReaderColors
             modifier = Modifier.padding(vertical = 8.dp),
         )
         Spacer(Modifier.height(16.dp))
+        Label("Keep the screen on", c)
+        Text(
+            "While you read, the screen stays on until you go this long without a touch. " +
+                "Off lets the phone sleep as usual.",
+            color = c.dim, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(bottom = 4.dp),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (m in Config.KEEP_AWAKE_CHOICES) {
+                val on = state.awakeMinutes == m
+                Text(
+                    if (m == 0) "Off" else "$m min",
+                    color = if (on) c.bg else c.text,
+                    fontSize = 15.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp))
+                        .background(if (on) c.accent else c.surface)
+                        .clickable { state.awakeMinutes = m }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
         Label(state.meta.ui("translation"), c)
         for (t in state.meta.translations) {
             Text(
@@ -785,7 +822,7 @@ private fun SettingsPane(app: AppController, state: ReaderState, c: ReaderColors
                         fontSize = 16.sp,
                         fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
                     )
-                    Text(state.meta.ui(howToOpen(d)), color = c.dim, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(start = 26.dp, top = 2.dp))
+                    Text(howToOpenText(app, state, d), color = c.dim, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(start = 26.dp, top = 2.dp))
                 }
             }
         }
@@ -801,8 +838,7 @@ private fun SettingsPane(app: AppController, state: ReaderState, c: ReaderColors
         Text("Erase everything", color = Color(0xFFC0392B), fontSize = 16.sp,
             modifier = Modifier.fillMaxWidth().clickable { confirmErase = true }.padding(vertical = 14.dp))
         Text(
-            "Locks after ${Config.IDLE_LOCK_MS / 1000} seconds without a touch, when you leave the app or turn the screen off, " +
-                "and when you double-tap the top-left corner.",
+            lockSummary(app, state),
             color = c.dim, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(vertical = 12.dp),
         )
     }
@@ -879,6 +915,25 @@ private fun GuidePane(state: ReaderState, c: ReaderColors, close: () -> Unit) {
             }
             item { Spacer(Modifier.height(32.dp)) }
         }
+    }
+}
+
+/** How to open the app from face [d]; without a code there is nothing to type. */
+private fun howToOpenText(app: AppController, state: ReaderState, d: Disguise): String = when {
+    app.hasCode -> state.meta.ui(howToOpen(d))
+    d == Disguise.READER -> "No code is set: it opens straight away, or tap Open."
+    else -> "No code is set: hold Search for ${Config.HOLD_TO_UNLOCK_MS / 1000} seconds and it opens."
+}
+
+/** The note at the end of Settings on when the app closes itself. */
+private fun lockSummary(app: AppController, state: ReaderState): String {
+    val idle = if (state.awakeMinutes > 0) "${state.awakeMinutes} minutes" else "${Config.IDLE_LOCK_MS / 1000} seconds"
+    return if (app.hasCode || app.disguise != Disguise.READER) {
+        "Locks after $idle without a touch, when you leave the app or turn the screen off, " +
+            "and when you double-tap the top-left corner."
+    } else {
+        "No code is set, so it opens again by itself when you come back to it. " +
+            "Double-tap the top-left corner to close it."
     }
 }
 

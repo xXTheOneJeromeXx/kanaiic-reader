@@ -153,6 +153,48 @@ class KeyVaultTest {
         assertArrayEquals("kept".toByteArray(), v.unlock(code("22222222"))!!.get("x"))
     }
 
+    @Test fun vaultWithoutACode() {
+        val v = vault()
+        v.create(ByteArray(0)).apply { put("x", "open".toByteArray()); wipe() }
+        assertFalse(v.hasCode())
+        assertArrayEquals("open".toByteArray(), v.unlockWithoutCode()!!.get("x"))
+        assertNull("no code means no code is accepted", v.unlock(code("123456")))
+        assertTrue("data is still sealed", File(tmp.root, "d").listFiles()!!.none { contains(it.readBytes(), "open".toByteArray()) })
+    }
+
+    @Test fun codeCanBeRemovedAndSetAgain() {
+        val v = vault()
+        val s = v.create(code("123456"))
+        s.put("x", "kept".toByteArray())
+        assertTrue(v.hasCode())
+        assertNull("a vault with a code doesn't open without it", v.unlockWithoutCode())
+        assertEquals("and that is not counted as a wrong code", 0, v.failures())
+
+        v.changeCode(s, ByteArray(0))
+        assertFalse(v.hasCode())
+        assertNull(v.unlock(code("123456")))
+        assertArrayEquals("kept".toByteArray(), v.unlockWithoutCode()!!.get("x"))
+
+        v.changeCode(s, code("87654321"))
+        s.wipe()
+        assertTrue(v.hasCode())
+        assertNull(v.unlockWithoutCode())
+        assertArrayEquals("kept".toByteArray(), v.unlock(code("87654321"))!!.get("x"))
+    }
+
+    @Test fun guardFromBeforeNoCodeStillReads() {
+        val v = vault()
+        v.create(code("123456")).wipe()
+        v.setWipeEnabled(true)
+        // A 1.10 guard file: [wipe][count] with no no-code byte.
+        File(tmp.root, "c1").writeBytes(device.encrypt(java.nio.ByteBuffer.allocate(5).put(1).putInt(3).array()))
+        assertTrue(v.hasCode())
+        assertTrue(v.wipeEnabled())
+        assertEquals(3, v.failures())
+        assertNotNull(v.unlock(code("123456")))
+        assertTrue(v.wipeEnabled())
+    }
+
     @Test fun backupRoundTrip() {
         val data = "highlights and notes".toByteArray()
         val file = com.tbce.calc.vault.Backup.seal("correct horse".toCharArray(), data)
