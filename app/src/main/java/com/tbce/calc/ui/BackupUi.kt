@@ -54,6 +54,8 @@ import kotlinx.coroutines.withContext
 fun BackupAndSecurity(app: AppController, state: ReaderState, c: ReaderColors, onImport: () -> Unit) {
     var wipe by remember { mutableStateOf(app.wipeEnabled()) }
     var confirmWipe by remember { mutableStateOf(false) }
+    var confirmNoCode by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     Text("BACKUP", color = c.dim, fontSize = 12.sp, letterSpacing = 1.5.sp, modifier = Modifier.padding(top = 20.dp, bottom = 4.dp))
     Row_(text = "Export notes, highlights and saved", c = c) { state.overlay = Overlay.Passphrase(export = true) }
     Row_(text = "Import from a backup file", c = c, onClick = onImport)
@@ -63,6 +65,21 @@ fun BackupAndSecurity(app: AppController, state: ReaderState, c: ReaderColors, o
         color = c.dim, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(bottom = 8.dp),
     )
     Text("SECURITY", color = c.dim, fontSize = 12.sp, letterSpacing = 1.5.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Ask for a code", color = c.text, fontSize = 16.sp)
+            Text(
+                if (app.hasCode) "Your code is needed to open it." else "Off: it opens without a code.",
+                color = c.dim, fontSize = 13.sp,
+            )
+        }
+        Switch(
+            checked = app.hasCode,
+            onCheckedChange = { on -> if (on) state.overlay = Overlay.ChangeCode else confirmNoCode = true },
+            colors = SwitchDefaults.colors(checkedTrackColor = c.accent, checkedThumbColor = c.bg),
+        )
+    }
+    if (!app.hasCode) return
     Row_(text = "Change code", c = c) { state.overlay = Overlay.ChangeCode }
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -81,12 +98,29 @@ fun BackupAndSecurity(app: AppController, state: ReaderState, c: ReaderColors, o
             title = { Text("Erase after ${Config.WIPE_AFTER} wrong codes?") },
             text = {
                 Text(
-                    "If ${Config.WIPE_AFTER} wrong codes are entered in a row with the hold-= gesture, everything here is " +
+                    "If ${Config.WIPE_AFTER} wrong codes are entered in a row, everything here is " +
                         "erased for good, including your notes. A right code resets the count. There is no undo, so keep a backup.",
                 )
             },
             confirmButton = { TextButton(onClick = { app.setWipeEnabled(true); wipe = true; confirmWipe = false }) { Text("Turn on") } },
             dismissButton = { TextButton(onClick = { confirmWipe = false }) { Text("Cancel") } },
+        )
+    }
+    if (confirmNoCode) {
+        AlertDialog(
+            onDismissRequest = { confirmNoCode = false },
+            title = { Text("Stop asking for a code?") },
+            text = { Text(NO_CODE_WARNING) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmNoCode = false
+                    scope.launch {
+                        app.changeCode(ByteArray(0))
+                        state.notice = "It now opens without a code."
+                    }
+                }) { Text("Turn off") }
+            },
+            dismissButton = { TextButton(onClick = { confirmNoCode = false }) { Text("Cancel") } },
         )
     }
 }

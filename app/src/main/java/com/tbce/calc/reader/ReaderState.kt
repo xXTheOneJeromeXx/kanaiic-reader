@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.tbce.calc.Config
 import com.tbce.calc.vault.VaultSession
 import org.json.JSONObject
 import java.io.File
@@ -84,6 +85,8 @@ class ReaderState(context: Context, private val session: VaultSession, systemDar
     var fontSize by mutableFloatStateOf(19f)
     var lineSpacing by mutableFloatStateOf(1.6f)
     var translationId by mutableStateOf(meta.translations[0].id)
+    /** Minutes the screen stays on (and the reader open) without a touch; 0 = the phone's own timeout. */
+    var awakeMinutes by mutableIntStateOf(0)
 
     /** Global chapter index shown in the reader. */
     var position by mutableIntStateOf(0)
@@ -204,6 +207,7 @@ class ReaderState(context: Context, private val session: VaultSession, systemDar
             o.optString("theme").takeIf { it.isNotEmpty() }?.let { theme = ReaderTheme.valueOf(it) }
             fontSize = o.optDouble("fontSize", fontSize.toDouble()).toFloat()
             lineSpacing = o.optDouble("lineSpacing", lineSpacing.toDouble()).toFloat()
+            awakeMinutes = o.optInt("awake", 0).takeIf { it in Config.KEEP_AWAKE_CHOICES } ?: 0
             o.optString("translation").takeIf { id -> meta.translations.any { it.id == id } }?.let { translationId = it }
             o.optJSONObject("positions")?.let { p -> p.keys().forEach { positions[it] = p.getInt(it) } }
             position = (positions[translationId] ?: 0).coerceIn(0, translation.totalChapters - 1)
@@ -219,6 +223,7 @@ class ReaderState(context: Context, private val session: VaultSession, systemDar
             .put("theme", theme.name)
             .put("fontSize", fontSize.toDouble())
             .put("lineSpacing", lineSpacing.toDouble())
+            .put("awake", awakeMinutes)
             .put("translation", translationId)
             .put("positions", JSONObject(positions as Map<*, *>))
         session.put(SETTINGS, o.toString().toByteArray(Charsets.UTF_8))

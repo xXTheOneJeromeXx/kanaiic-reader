@@ -34,7 +34,8 @@ import com.tbce.calc.Disguises
 
 /**
  * The app's own (undisguised) front screen: the app's own name, and a plain code pad to open
- * it. No hidden gesture. On a fresh install it offers to choose a code first.
+ * it. No hidden gesture. On a fresh install it offers to choose a code first. Without a code
+ * it shows an Open button instead of the pad (and opens by itself when the app comes back).
  */
 @Composable
 fun ReaderLockScreen(app: AppController) {
@@ -72,6 +73,11 @@ fun ReaderLockScreen(app: AppController) {
                 TextButton(onClick = { app.startSetup() }) { Text(app.ui["reader_start"] ?: "Start", fontSize = 18.sp) }
                 return@Column
             }
+            if (!app.hasCode) {
+                if (app.opening) CircularProgressIndicator()
+                else TextButton(onClick = { app.openWithoutCode() }) { Text(app.ui["reader_open"] ?: "Open", fontSize = 18.sp) }
+                return@Column
+            }
             Text(if (wrong) app.ui["reader_wrong"] ?: "" else app.ui["reader_enter"] ?: "", color = colors.dim, fontSize = 16.sp)
             Spacer(Modifier.height(16.dp))
             val shown = count.let { code.length }
@@ -81,7 +87,7 @@ fun ReaderLockScreen(app: AppController) {
                 CircularProgressIndicator()
             }
         }
-        if (app.hasVault()) {
+        if (app.hasVault() && app.hasCode) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(KeyGap)) {
                 for (r in listOf(listOf(1, 2, 3), listOf(4, 5, 6), listOf(7, 8, 9))) {
                     Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(KeyGap)) {

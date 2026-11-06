@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.11.0 (2026-11-06): optional code, keep the screen on
+
+- **The code is optional.** Setup has a **Use without a code** button, and Settings >
+  Security > **Ask for a code** turns the code off or back on. Without a code, Kanaiic Reader
+  shows an Open button and opens by itself when you come back to it, and the dictionary
+  opens the reader as soon as Search has been held for three seconds. Notes stay encrypted on
+  the phone, but anyone who can use the phone can open the app.
+- **Keep the screen on** (Settings): 5, 15 or 30 minutes. While you read, the screen stays on
+  and the reader stays open until you go that long without a touch, instead of the phone
+  sleeping and the reader closing after 60 seconds. Off by default.
+
 ## 1.10.0 (2026-10-26): one Search, marked results, a Back arrow
 
 - **Search and Strong's are one tab.** The same box finds words in the current translation,

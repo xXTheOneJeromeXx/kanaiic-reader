@@ -106,6 +106,15 @@ Play (`app-play-*.apk`):
 3. Change code: the old code no longer opens, the new one does.
 4. "Erase after 10 wrong codes" on, 10 wrong codes: everything is erased and setup starts again.
 5. Set up again and import the backup: notes, highlights and saved items come back.
+6. Settings > Security > Ask for a code off, confirm: Change code and the 10-wrong-codes
+   switch disappear. Leave the app and come back: as Kanaiic Reader it opens by itself with
+   notes intact; double-tap the corner: an Open button, no number pad. As the Dictionary:
+   holding Search 3 s opens the reader with no number pad. Turn Ask for a code on: choose a
+   code, and only that code opens it again.
+7. Fresh install: setup's **Use without a code** opens the reader with no code.
+8. Settings > Keep the screen on, 5 min: reading untouched, the screen stays on past the
+   phone's timeout and the reader stays open past 60 s; after 5 min untouched it locks and
+   the phone sleeps. Off: back to the phone's timeout and the 60 s idle lock.
 
 ## Updates
 

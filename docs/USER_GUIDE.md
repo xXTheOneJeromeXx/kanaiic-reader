@@ -50,6 +50,12 @@ app at all. Only you can weigh that.
    Kanaiic Reader; you can switch any time in Settings > Disguise. Either way, Settings always
    shows how to open the app, at the top.
 
+You can also tap **Use without a code** on the first screen of setup. The app then opens with
+nothing to type: as Kanaiic Reader it opens straight away (or tap **Open**), and as a
+dictionary holding **Search** for three seconds opens it. Your notes are still stored
+encrypted, tied to this phone, but anyone who can use your phone can open the app. You can set
+a code later in Settings > Security > Ask for a code, or turn the code off there.
+
 There is no way to recover a forgotten code. Nobody can reset it, including the people who
 made the app. If you forget it, everything inside is gone. Make a backup (see below).
 
@@ -79,7 +85,10 @@ It closes itself and shows the front screen again:
 - when you double-tap the top-left corner,
 - when you press Back with nowhere left to go back to,
 - when you go to the home screen or another app, or the screen turns off,
-- after 60 seconds without a touch.
+- after 60 seconds without a touch (or the time chosen under Settings > Keep the screen on).
+
+Without a code, Kanaiic Reader opens again by itself when you come back to it, and doesn't
+close after a time without a touch.
 
 Screenshots, screen recording and the app-switcher preview are blocked while it is open.
 
@@ -98,6 +107,9 @@ Screenshots, screen recording and the app-switcher preview are blocked while it 
 - Strong's: select verses and tap **Strong's** to see the Hebrew or Greek word behind each
   King James word, with its Strong's number.
 - Settings: theme (Paper, Sepia, Dark, Black), text size and line spacing.
+- Settings > Keep the screen on: 5, 15 or 30 minutes. While you read, the screen stays on
+  and the reader stays open until you go that long without a touch. Off lets the phone
+  sleep as usual (and the reader closes after 60 seconds without a touch).
 
 ## Highlights, notes and Saved
 
@@ -145,6 +157,8 @@ never deletes or replaces anything.
   resets the count. This protects against someone guessing on your phone, but a person who
   knows about it could also use it to destroy your notes. Keep a backup if you turn it on.
 - Change code (Settings > Security) lets you pick a new code at any time.
+- Ask for a code (Settings > Security) turns the code off or on. Off, nothing protects what
+  is inside from someone who can use your phone.
 
 ## What it protects against
 
@@ -163,6 +177,7 @@ never deletes or replaces anything.
 - Anything in the dictionary's Notes or PDF tabs. They are ordinary, unlocked features.
 - On Kanaiic Reader, anyone who checks the app's details. See "Two versions".
 - Someone who makes you open it, or who takes the phone while it is open.
+- Without a code, anyone who can use your phone.
 - A skilled examiner with time. They can take the app apart, see that it hides a reader,
   and find the Bible text inside the app file (it is only lightly locked there). They can
   also try codes on your actual phone, which is why a long code matters and why the
